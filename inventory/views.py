@@ -18,3 +18,19 @@ async def product_list(request):
     ]
 
     return JsonResponse(products, safe=False)
+
+async def product_detail(request, pk):
+    product = await Product.objects.select_related(
+        'category', 'supplier'
+    ).aget(pk=pk)
+
+    data = {
+        'id': product.id,
+        'name': product.name,
+        'price': product.price,
+        'stock': product.stock,
+        'category': product.category.name,
+        'supplier': product.supplier.name,
+    }
+
+    return JsonResponse(data, safe=False)
