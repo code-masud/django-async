@@ -1,24 +1,52 @@
+import time
+import asyncio
 from django.http import JsonResponse
 from django.db import transaction
 from django.db.models import Q, Count, Sum, F, OuterRef, Subquery
 from .models import Supplier, Category, Product, StockMovement
+from django.core.cache import cache
+from .tasks import rebuild_product_cache
+import time
+
+CACHE_KEY = "product_list_v2"
+TTL = 300
+
+async def rebuild_cache():
+    queryset = Product.objects.select_related(
+        "category", "supplier"
+    ).values(
+        "id",
+        "name",
+        "price",
+        "stock",
+        "category__name",
+        "supplier__name",
+    )
+
+    data = [item async for item in queryset]
+
+    payload = {
+        "data": data,
+        "expires_at": time.time() + TTL
+    }
+
+    cache.set(CACHE_KEY, payload, TTL * 2)
+
 
 async def product_list(request):
-    search = request.GET.get('search', '')
+    payload = cache.get(CACHE_KEY)
 
-    queryset = Product.objects.filter(is_active=True)
+    if payload:
+        if payload["expires_at"] < time.time():
+            # Expired but serve stale
+            asyncio.create_task(rebuild_cache())
 
-    if search:
-        queryset = queryset.filter(
-            Q(name__icontains=search)|
-            Q(category__name__icontains=search)
-        )
-    
-    products = [
-        item async for item in queryset.values('id', 'name', 'price', 'stock', 'category__name', 'supplier__name')
-    ]
+        return JsonResponse(payload["data"], safe=False)
 
-    return JsonResponse(products, safe=False)
+    # Cold start
+    await rebuild_cache()
+    payload = cache.get(CACHE_KEY)
+    return JsonResponse(payload["data"], safe=False)
 
 async def product_detail(request, pk):
     product = await Product.objects.select_related(
