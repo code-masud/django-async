@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'inventory.apps.InventoryConfig'
+    'inventory.apps.InventoryConfig',
+    'celery',
 ]
 
 MIDDLEWARE = [
@@ -77,8 +78,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DATABASES_ENGINE', 'django.db.backends.sqlite3'),
-        'NAME': BASE_DIR / os.getenv('DATABASES_NAME', 'db.sqlite3'),
+        'ENGINE': os.getenv('DATABASE_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': os.getenv('DATABASE_NAME', 'db.sqlite3'),
+        'USER': os.getenv('DATABASE_USER', ''),
+        'PASSWORD': os.getenv('DATABASE_PASSWORD', ''),
+        'HOST': os.getenv('DATABASE_HOST', ''),
+        'PORT': os.getenv('DATABASE_PORT', ''),
     }
 }
 
@@ -126,14 +131,13 @@ MEDIA_ROOT = os.getenv('', 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-EMAIL_BACKEND=os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_BACKEND=os.getenv('EMAIL_BACKEND')
 EMAIL_HOST=os.getenv('EMAIL_HOST')
 EMAIL_PORT=os.getenv('EMAIL_PORT')
 EMAIL_USE_TLS=os.getenv('EMAIL_USE_TLS', True)
 EMAIL_HOST_USER=os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD=os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL=os.getenv('DEFAULT_FROM_EMAIL')
-
+DEFAULT_FROM_EMAIL=os.getenv('EMAIL_HOST_USER')
 
 CACHES = {
     "default": {
@@ -144,3 +148,8 @@ CACHES = {
         }
     }
 }
+
+
+CELERY_BROKER_URL = os.getenv('REDIS_LOCATION', 'redis://127.0.0.1:6379')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_LOCATION', 'redis://127.0.0.1:6379')
+CELERY_TIMEZONE = 'UTC'
